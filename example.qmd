@@ -1,0 +1,36 @@
+---
+title: "Typst-column Example"
+format: typst
+filters:
+  - typst-column
+---
+
+## Heading
+
+::: {.columns}
+
+::: {.column}
+{{< lipsum 1 >}}
+:::
+
+::: {.column}
+{{< lipsum 1 >}}
+:::
+
+::: {.column}
+{{< lipsum 1 >}}
+:::
+
+:::
+
+::: {.columns gutter="40pt"}
+
+::: {.column width="70%"}
+{{< lipsum 2 >}}
+:::
+
+::: {.column width="30%"}
+{{< lipsum 1 >}}
+:::
+
+:::
