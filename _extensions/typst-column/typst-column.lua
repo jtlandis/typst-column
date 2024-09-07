@@ -46,30 +46,6 @@ function typst_block(string)
   return pandoc.RawBlock('typst', string)
 end
 
--- takes a Div element and returns its contents
--- with the appropriate typst block wrappers
-function new_quarto_column(el)
-  local width = nil
-  if has_attr(el, "width") then
-    width = el.attributes["width"]
-  end
-  quarto_column(width, el.content)
-  return el.content
-end
-
-function quarto_column(width, content)
-  local typst = nil
-  if width then
-    typst = typst_block("quarto_column(width: " .. width .. ")[",
-      "quarto-typst-column-start")
-  else
-    typst = typst_block("quarto_column[",
-      "quarto-typst-column-start")
-  end
-  table.insert(content, 1, typst)
-  table.insert(content, typst_block("],"))
-end
-
 function quarto_columns(el)
   local content = el.content
   local gutter = nil
