@@ -60,9 +60,11 @@ end
 function quarto_column(width, content)
   local typst = nil
   if width then
-    typst = typst_block("quarto_column(width: " .. width .. ")[")
+    typst = typst_block("quarto_column(width: " .. width .. ")[",
+      "quarto-typst-column-start")
   else
-    typst = typst_block("quarto_column[")
+    typst = typst_block("quarto_column[",
+      "quarto-typst-column-start")
   end
   table.insert(content, 1, typst)
   table.insert(content, typst_block("],"))
@@ -71,12 +73,16 @@ end
 function quarto_columns(el)
   local content = el.content
   local gutter = nil
+  local typst = "#grid("
+  if has_attr(el, "widths") then
+    local widths = el.attributes["widths"]
+    typst = typst .. "columns: (" .. widths .. "), "
+  end
   if has_attr(el, "gutter") then
     gutter = el.attributes["gutter"]
-    table.insert(content, 1, typst_block("#quarto_columns(gutter: " .. gutter .. ", "))
-  else
-    table.insert(content, 1, typst_block("#quarto_columns("))
+    typst = typst .. "gutter: " .. gutter .. ", "
   end
+  table.insert(content, 1, typst_block(typst))
   table.insert(content, typst_block(")"))
   return content
 end
@@ -88,72 +94,70 @@ function is_typst_block(el)
   return false
 end
 
-function Div(el)
-  if is_column(el) then
-    return new_quarto_column(el)
-  end
-  if is_column_container(el) then
-    local within_typst = false
-    local block_is_typst = false
-    for i, thing in pairs(el.content) do
-      block_is_typst = is_typst_block(thing)
-      if block_is_typst then
-        within_typst = not within_typst
+check_columns = {
+  Div = function(el)
+    if is_column_container(el) then
+      local widths = {}
+      local is_col = false
+      local val = nil
+      for i, thing in pairs(el.content) do
+        is_col = is_column(thing)
+        -- send an error if we detect content (that isnt typst content)
+        -- outside of the quarto div markers
+        if not (is_col or is_typst_block(thing)) then
+          print(thing)
+          error("invalid column content. all content should be within :::{.column} :::")
+          os.exit(1)
+        end
+        -- if it is a column, grab width attr
+        if is_col then
+          if has_attr(thing, "width") then
+            val = thing.attributes["width"]
+          else
+            val = "auto"
+          end
+          table.insert(widths, val)
+        end
       end
-      if not within_typst and not block_is_typst then
-        print(thing)
-        error("Imporper column format")
-        os.exit(1)
-      end
+      el.attributes["widths"] = table.concat(widths, ", ")
     end
-    return quarto_columns(el)
+    return el
   end
-  return el
-end
+}
+
+set_typst_cols = {
+  Div = function(el)
+    if is_column_container(el) then
+      local n = #el.content
+      local shift = 0
+      local indx = nil
+      local col = nil
+      table.insert(el.content, 1, typst_block("[ "))
+      shift = shift + 1
+      for i = 1, n do
+        -- current shift
+        indx = i + shift
+        --print("current i: " .. i .. "  current size: " .. #el.content .. "  expected index: " .. indx)
+        -- if div is column class, insert more typst contents
+        col = el.content[indx]
+        if is_column(col) then
+          if i == n then
+            table.insert(el.content, typst_block("] "))
+          else
+            table.insert(el.content, indx + 1, typst_block("], [ "))
+          end
+          shift = shift + 1
+        end
+      end
+      el.content = quarto_columns(el)
+    end
+    return el
+  end
+}
+
 
 function Pandoc(el)
-  local meta = el.meta
-  local incl_before = el.meta["include-before"]
-  table.insert(incl_before,
-    typst_block(
-      [[
-      #let quarto_column(width: auto, body) = {
-        (
-          width: width,
-          body: body
-        )
-      }
-
-      #let quarto_columns(gutter: 12pt, ..columns) = {
-        let check_values = (values) => {
-          let auto_count = values.filter(x => x == auto).len();
-
-          // If there are any auto values
-          if auto_count > 0 {
-              // Calculate the new equal percentage for all values
-              let equal_percentage = 100% / values.len();
-              let equal_percentage = equal_percentage - 1%
-              // Return an array where all values are set to equal_percentage
-              values.map(x => equal_percentage)
-          } else {
-              // If no auto values, return the original array
-              values
-          }
-        }
-        let columns = columns.pos()
-        let widths = columns
-          .map(it => {
-            it.width
-          })
-        let widths = check_values(widths)
-
-        let contents = columns
-          .map(it => {
-            it.body
-          })
-        grid(columns: widths,
-             gutter: gutter, ..contents)
-      }]])
-  )
+  el.blocks = el.blocks:walk(check_columns)
+  el.blocks = el.blocks:walk(set_typst_cols)
   return el
 end
