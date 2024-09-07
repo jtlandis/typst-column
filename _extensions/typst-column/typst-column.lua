@@ -56,8 +56,10 @@ function quarto_columns(el)
   end
   if has_attr(el, "gutter") then
     gutter = el.attributes["gutter"]
-    typst = typst .. "gutter: " .. gutter .. ", "
+  else
+    gutter = "10pt" -- default value for some spacing
   end
+  typst = typst .. "gutter: " .. gutter .. ", "
   table.insert(content, 1, typst_block(typst))
   table.insert(content, typst_block(")"))
   return content
