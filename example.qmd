@@ -7,12 +7,18 @@ filters:
 
 ## Heading
 
+<!-- default gutter spacing is 10pt -->
 ::: {.columns}
 
 ::: {.column}
 {{< lipsum 1 >}}
 :::
-
+<!-- only raw typst blocks are valid in-between -->
+<!-- {.columns} and {.column}  contents -->
+<!-- i.e. this block will style the next column only. -->
+```{=typst}
+#set text(red)
+```
 ::: {.column}
 {{< lipsum 1 >}}
 :::
@@ -23,9 +29,24 @@ filters:
 
 :::
 
-::: {.columns gutter="40pt"}
+<!-- when adding more spacing to gutter, this may affect how the column -->
+<!-- widths are rendered: i.e. content could flow into the margins -->
 
-::: {.column width="70%"}
+::: {.columns gutter="25pt"}
+
+::: {.column width="65%"}
+{{< lipsum 2 >}}
+:::
+
+::: {.column width="30%"}
+{{< lipsum 1 >}}
+:::
+
+:::
+
+::: {.columns gutter="50pt"}
+
+::: {.column width="65%"}
 {{< lipsum 2 >}}
 :::
 
